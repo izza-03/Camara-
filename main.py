@@ -226,6 +226,7 @@ async def endpoint_camara(websocket: WebSocket):
 
     try:
         while True:
+
             mensaje_raw = await websocket.receive_text()
             mensaje = json.loads(mensaje_raw)
 
@@ -233,24 +234,52 @@ async def endpoint_camara(websocket: WebSocket):
             umbral = float(mensaje.get("umbral", 0.30))
 
             if not imagen_b64:
+                print("No llegó imagen")
                 continue
+
 
             frame = decodificar_imagen_b64(imagen_b64)
+
             if frame is None:
+                print("Imagen inválida")
                 continue
 
-            frame_procesado, detecciones = correr_inferencia(frame, umbral)
-            imagen_salida_b64 = codificar_imagen_b64(frame_procesado)
 
-            await websocket.send_text(json.dumps({
-                "imagen": imagen_salida_b64,
-                "detecciones": detecciones,
-            }))
+            print("📷 Imagen recibida:", frame.shape)
+
+
+            frame_procesado, detecciones = correr_inferencia(
+                frame,
+                umbral
+            )
+
+
+            print("🔎 Detecciones:", detecciones)
+
+
+            imagen_salida_b64 = codificar_imagen_b64(
+                frame_procesado,
+                calidad=70
+            )
+
+
+            await websocket.send_text(
+                json.dumps(
+                    {
+                        "imagen": imagen_salida_b64,
+                        "detecciones": detecciones
+                    }
+                )
+            )
+
 
     except WebSocketDisconnect:
         print("Cliente desconectado.")
+
+
     except Exception as e:
-        print(f"Error en el WebSocket: {e}")
+        print("Error en WebSocket:", e)
+
 
 
 @app.get("/")
